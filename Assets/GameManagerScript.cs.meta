@@ -6,6 +6,8 @@ MonoImporter:
   defaultReferences:
   - PlayerPrefab: {fileID: 1172157167416225725, guid: 8933b3422955ca7478179a02491c7b2b, type: 3}
   - BoxPrefab: {fileID: 3479701265312165484, guid: d39530e4d9512df479591a132e3f02dd, type: 3}
+  - GoalPrefab: {fileID: 7137364669783114280, guid: 43f0a6351dd8b114c80100fa2e9dcf9c, type: 3}
+  - ClearText: {instanceID: 0}
   executionOrder: 0
   icon: {instanceID: 0}
   userData: 

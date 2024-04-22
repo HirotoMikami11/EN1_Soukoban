@@ -1,4 +1,8 @@
+using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UIElements;
+
+
 
 public class NewBehaviourScript : MonoBehaviour
 {
@@ -42,7 +46,7 @@ public class NewBehaviourScript : MonoBehaviour
         if (moveTo.x < 0 || moveTo.x >= field.GetLength(1)) { return false; }//x座標
 
         //移動先に（箱）があるときの処理
-        if (field[moveTo.y,moveTo.x]!=null && field[moveTo.y,moveTo.x].tag == "Box")
+        if (field[moveTo.y, moveTo.x] != null && field[moveTo.y, moveTo.x].tag == "Box")
         {
             //どの方向に移動するか産出
             Vector2Int velocity = moveTo - moveFrom;
@@ -56,21 +60,64 @@ public class NewBehaviourScript : MonoBehaviour
 
         //配列の値の移動を行う前にmoveFromにあるゲームオブジェクトの座標を変更する
         //ゲームオブジェクトの移動
-        field[moveFrom.y, moveFrom.x].transform.position = new Vector3(moveTo.x,field.GetLength(0)- moveTo.y,0);
-
+        field[moveFrom.y, moveFrom.x].transform.position = new Vector3(moveTo.x, field.GetLength(0) - moveTo.y, 0);
+        //particleを生成
+        for (int i = 0; i < Random.Range(3, 10); i++)
+        {
+            Instantiate(
+     particlePrefab,
+     new Vector3(moveFrom.x, map.GetLength(0) - moveFrom.y, 0),
+     Quaternion.identity);
+        }
         //プレイヤー・箱変わらずの移動処理
-        field[moveTo.y, moveTo.x] =field[moveFrom.y, moveFrom.x];
-        field[moveFrom.y,moveFrom.x] = null;
+        field[moveTo.y, moveTo.x] = field[moveFrom.y, moveFrom.x];
+        field[moveFrom.y, moveFrom.x] = null;
         return true;
 
     }
 
+    bool IsCleard()
+    {
+        //Vector2Int型の可変長配列の作成
+        List<Vector2Int> goals = new List<Vector2Int>();
+        for (int y = 0; y < map.GetLength(0); y++)
+        {
+            for (int x = 0; x < map.GetLength(1); x++)
+            {
+                //格納場所か否かを判断
+                if (map[y, x] == 3)
+                {
+                    //格納場所のインデックスを控えておく
+                    goals.Add(new Vector2Int(x, y));
+                }
+            }
+        }
 
+        ///全ての3の場所に箱が存在するときかどうかを判断する
+        //要素数はgoals.Countで取得する
+        for (int i = 0; i < goals.Count; i++)
+        {
+            GameObject f = field[goals[i].y, goals[i].x];
+            ///fの場所に箱がない時
+            if (f == null || f.tag != "Box")
+            {
+                //条件未達成とする
+                return false;
+            }
+        }
+        //条件未達成でなければクリア
+        return true;
+    }
 
 
     //配列の宣言
-    public GameObject PlayerPrefab;
-    public GameObject BoxPrefab;
+    public GameObject playerPrefab;
+    public GameObject boxPrefab;
+    public GameObject goalPrefab;
+    public GameObject particlePrefab;
+
+    //
+    public GameObject clearText;
 
     //二次元配列の宣言
     int[,] map;     //レベルデザイン用の配列
@@ -83,12 +130,14 @@ public class NewBehaviourScript : MonoBehaviour
     void Start()
     {    //イニシャライズ（一回だけ）
 
+        Screen.SetResolution(1920, 1080, false);
+
         ///配列の実体の作成と初期化
         map = new int[,] {
             {0,0,0,0,0 },
-            {0,2,1,0,0 },
-            {0,0,2,2,0 },
-            {0,0,0,0,0 },
+            {0,3,1,3,0 },
+            {0,0,2,0,0 },
+            {0,2,3,2,0 },
             {0,0,0,0,0 },
         };
 
@@ -103,7 +152,7 @@ public class NewBehaviourScript : MonoBehaviour
                 if (map[y, x] == 1)
                 {
                     field[y, x] = Instantiate(
-                    PlayerPrefab,
+                    playerPrefab,
                     new Vector3(x, map.GetLength(0) - y, 0),
                     Quaternion.identity);
                 }
@@ -111,11 +160,17 @@ public class NewBehaviourScript : MonoBehaviour
                 if (map[y, x] == 2)
                 {
                     field[y, x] = Instantiate(
-                    BoxPrefab,
+                    boxPrefab,
                     new Vector3(x, map.GetLength(0) - y, 0),
                     Quaternion.identity);
                 }
-
+                if (map[y, x] == 3)
+                {
+                    Instantiate(
+                    goalPrefab,
+                    new Vector3(x, map.GetLength(0) - y, 0.01f),
+                    Quaternion.identity);
+                }
 
             }
         }
@@ -137,8 +192,16 @@ public class NewBehaviourScript : MonoBehaviour
             //1.１が格納されているインデックスを探す
             Vector2Int playerIndex = GetPlayerIndex();
 
-            MoveNumber("Box", playerIndex, (playerIndex + new Vector2Int(1, 0)));
 
+
+            MoveNumber("Player", playerIndex,
+                (playerIndex + new Vector2Int(1, 0)));
+            //クリア条件を満たしていたら
+            if (IsCleard() == true)
+            {
+                //ゲームクリアのテキストを表示する
+                clearText.SetActive(true);
+            }
 
         }
 
@@ -153,8 +216,13 @@ public class NewBehaviourScript : MonoBehaviour
             //1.１が格納されているインデックスを探す
             Vector2Int playerIndex = GetPlayerIndex();
 
-            MoveNumber("Box", playerIndex, (playerIndex+ new Vector2Int(-1, 0)));
-
+            MoveNumber("Player", playerIndex, (playerIndex + new Vector2Int(-1, 0)));
+            //クリア条件を満たしていたら
+            if (IsCleard() == true)
+            {
+                //ゲームクリアのテキストを表示する
+                clearText.SetActive(true);
+            }
 
         }
         /*-----------------------------------------------*/
@@ -168,8 +236,13 @@ public class NewBehaviourScript : MonoBehaviour
             //1.１が格納されているインデックスを探す
             Vector2Int playerIndex = GetPlayerIndex();
 
-            MoveNumber("Box", playerIndex, (playerIndex + new Vector2Int(0, -1)));
-
+            MoveNumber("Player", playerIndex, (playerIndex + new Vector2Int(0, -1)));
+            //クリア条件を満たしていたら
+            if (IsCleard() == true)
+            {
+                //ゲームクリアのテキストを表示する
+                clearText.SetActive(true);
+            }
 
         }
         /*-----------------------------------------------*/
@@ -183,10 +256,17 @@ public class NewBehaviourScript : MonoBehaviour
             //1.１が格納されているインデックスを探す
             Vector2Int playerIndex = GetPlayerIndex();
 
-            MoveNumber("Box", playerIndex, (playerIndex + new Vector2Int(0, 1)));
-
+            MoveNumber("Player", playerIndex, (playerIndex + new Vector2Int(0, 1)));
+            //クリア条件を満たしていたら
+            if (IsCleard() == true)
+            {
+                //ゲームクリアのテキストを表示する
+                clearText.SetActive(true);
+            }
 
         }
+
+
 
 
 
